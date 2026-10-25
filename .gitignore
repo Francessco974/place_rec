@@ -1,2 +1,3 @@
 .place_rec_env/
 build/
+.vscode/settings.json
