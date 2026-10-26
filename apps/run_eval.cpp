@@ -1,6 +1,7 @@
 // run_eval (v1, tiny backend only)
 // usage: run_eval --seq <tum_dir> --out <dir> [--period 1.0] [--exclude 20] [--topk 10]
-// Writes keyframes.csv, candidates.csv, loops.csv (header only), timing.csv into <dir> (must exist).
+// Writes keyframes.csv, candidates.csv, loops.csv (header only), timing.csv into <dir> (must
+// exist).
 #include <chrono>
 #include <fstream>
 #include <iostream>

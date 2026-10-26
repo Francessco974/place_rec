@@ -7,16 +7,16 @@
 
 namespace pr {
 
-class TinyImageRecognizer : public PlaceRecognizer{
-public:
-    std::vector<Candidate> query(const Keyframe& kf, double max_stamp, int max_results) const override;
-    void add (const Keyframe& kf) override;
+class TinyImageRecognizer : public PlaceRecognizer {
+ public:
+  std::vector<Candidate> query(const Keyframe& kf, double max_stamp,
+                               int max_results) const override;
+  void add(const Keyframe& kf) override;
 
-private:
-    static cv::Mat describe (const cv::Mat& gray);
-    std::vector<cv::Mat> descs_;
-    std::vector<double> stamps_;
-
+ private:
+  static cv::Mat describe(const cv::Mat& gray);
+  std::vector<cv::Mat> descs_;
+  std::vector<double> stamps_;
 };
-    
-} //namespace pr
+
+}  // namespace pr
