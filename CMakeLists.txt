@@ -35,7 +35,7 @@ target_link_libraries(run_eval PRIVATE place_rec)
 
 enable_testing()
 find_package(GTest REQUIRED)
-add_executable(unit_tests tests/test_bow.cpp tests/test_verifier.cpp)
+add_executable(unit_tests tests/test_bow.cpp tests/test_verifier.cpp tests/test_vocabulary_tree.cpp)
 target_link_libraries(unit_tests PRIVATE place_rec GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
