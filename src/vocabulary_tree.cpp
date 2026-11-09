@@ -153,9 +153,15 @@ void VocabularyTree::train(const std::vector<const Desc256*>& x, const Params& p
     throw std::invalid_argument("x and imgs_ids size must be equal");
   if (x.empty()) return;
 
-  // ids starts from 0
-  const int num_images = *std::max_element(imgs_ids.begin(), imgs_ids.end()) + 1;
+  if (*std::min_element(imgs_ids.begin(), imgs_ids.end()) < 0)
+    throw std::invalid_argument("imgs_ids must be >= 0");
 
+  if (!std::is_sorted(imgs_ids.begin(), imgs_ids.end()))
+    throw std::invalid_argument("imgs_ids must be non-decreasing (contiguous per image)");
+
+  // ids starts from 0
+  int num_images = 1;
+  int curr_img = imgs_ids[0];
   // Start building
   std::mt19937 rng(params_.seed);
   build(0, x, 0, rng);
@@ -167,6 +173,10 @@ void VocabularyTree::train(const std::vector<const Desc256*>& x, const Params& p
     auto word = transform(*x[i]);
     if (word == -1) continue;
     if (imgs_ids[i] == last_img[word]) continue;  // already seen in the image
+    if (curr_img != imgs_ids[i]) {
+      curr_img = imgs_ids[i];
+      num_images++;
+    }
     doc_freq[word] += 1;
     last_img[word] = imgs_ids[i];
   }

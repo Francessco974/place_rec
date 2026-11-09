@@ -218,3 +218,24 @@ TEST(VocabularyTreeIdf, SizeMismatchThrows) {
   pr::VocabularyTree t;
   EXPECT_THROW(t.train(ptrs(data), {}, {0, 0}), std::invalid_argument);
 }
+
+TEST(VocabularyTreeIdf, UnsortedIdsThrow) {
+  std::vector<pr::Desc256> data(4, ones());
+  pr::VocabularyTree t;
+  EXPECT_THROW(t.train(ptrs(data), {}, {0, 1, 0, 1}), std::invalid_argument);
+}
+
+TEST(VocabularyTreeIdf, NegativeIdThrows) {
+  std::vector<pr::Desc256> data(2, ones());
+  pr::VocabularyTree t;
+  EXPECT_THROW(t.train(ptrs(data), {}, {-1, 0}), std::invalid_argument);
+}
+
+TEST(VocabularyTreeIdf, GapInIdsCountsGroups) {
+  const auto a1 = zeros(), b1 = ones();
+  std::vector<pr::Desc256> data = {a1, b1, a1, b1};
+  pr::VocabularyTree t;
+  t.train(ptrs(data), {2, 2, 25, 42}, {0, 0, 5, 5});  // 2 images, ids 0 and 5
+  for (int w = 0; w < t.num_words(); ++w)
+    EXPECT_FLOAT_EQ(t.idf(w), 0.0f);  // each word in both images
+}
