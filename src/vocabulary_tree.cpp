@@ -1,6 +1,7 @@
 #include "place_rec/vocabulary_tree.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <stdexcept>
 #include <vector>
@@ -98,4 +99,100 @@ auto VocabularyTree::kmeans(const std::vector<const Desc256*>& x, int k, int max
   }
   return results;
 }
+
+void VocabularyTree::build(int node, const std::vector<const Desc256*>& x, int depth,
+                           std::mt19937& rng) {
+  auto make_leaf = [&] {
+    tree_[node].word = static_cast<int>(word_node_.size());
+    word_node_.push_back(node);
+  };
+
+  // Base cases: max depth reached, or too few points to split meaningfully.
+  if (depth == params_.L || x.size() <= 1) {
+    make_leaf();
+    return;
+  }
+
+  auto out = kmeans(x, params_.k, params_.max_iters, rng);
+
+  // All points identical (or one cluster survived): a split adds nothing.
+  if (out.centroids.size() <= 1) {
+    make_leaf();
+    return;
+  }
+
+  std::vector<std::vector<const Desc256*>> subsets(out.centroids.size());
+  for (size_t i = 0; i < x.size(); ++i) subsets[out.assign[i]].push_back(x[i]);
+
+  for (size_t i = 0; i < out.centroids.size(); i++) {
+    const int id = static_cast<int>(tree_.size());
+    // Create child node
+    Node child{};
+    child.centroid = out.centroids[i];
+    // add to tree
+    tree_.push_back(child);
+    tree_[node].children.push_back(id);
+    build(id, subsets[i], depth + 1, rng);
+  }
+}
+
+void VocabularyTree::train(const std::vector<const Desc256*>& x, const Params& params,
+                           const std::vector<int>& imgs_ids) {
+  /*imgs_ids[i] is the image of x[i]; ids are >= 0; descriptors of one image are contiguous*/
+  // Initialize
+  tree_.clear();
+  word_node_.clear();
+  idf_.clear();
+
+  // Set params
+  params_ = params;
+  // Create root
+  Node root;
+  tree_.push_back(root);
+  if (!(x.size() == imgs_ids.size()))
+    throw std::invalid_argument("x and imgs_ids size must be equal");
+  if (x.empty()) return;
+
+  // ids starts from 0
+  const int num_images = *std::max_element(imgs_ids.begin(), imgs_ids.end()) + 1;
+
+  // Start building
+  std::mt19937 rng(params_.seed);
+  build(0, x, 0, rng);
+
+  std::vector<int> doc_freq(word_node_.size(), 0);
+  std::vector<int> last_img(num_words(), -1);
+  idf_.assign(word_node_.size(), 0.0);
+  for (std::size_t i = 0; i < x.size(); i++) {
+    auto word = transform(*x[i]);
+    if (word == -1) continue;
+    if (imgs_ids[i] == last_img[word]) continue;  // already seen in the image
+    doc_freq[word] += 1;
+    last_img[word] = imgs_ids[i];
+  }
+  for (std::size_t c = 0; c < word_node_.size(); c++) {
+    if (doc_freq[c] > 0)
+      idf_[c] = std::log(static_cast<float>(num_images) / static_cast<float>(doc_freq[c]));
+  }
+}
+
+int VocabularyTree::transform(const Desc256& descriptor) const {
+  if (tree_.empty()) return -1;
+  int curr = 0;
+  while (!tree_[curr].children.empty()) {
+    int best = tree_[curr].children[0];  // initial guess
+    int d = hamming(descriptor, tree_[best].centroid);
+
+    for (int child : tree_[curr].children) {
+      int d_cmp = hamming(descriptor, tree_[child].centroid);
+      if (d > d_cmp) {
+        d = d_cmp;
+        best = child;  // Node id
+      }
+    }
+    curr = best;
+  }
+  return tree_[curr].word;
+}
+
 }  // namespace pr
