@@ -159,7 +159,6 @@ void VocabularyTree::train(const std::vector<const Desc256*>& x, const Params& p
   if (!std::is_sorted(imgs_ids.begin(), imgs_ids.end()))
     throw std::invalid_argument("imgs_ids must be non-decreasing (contiguous per image)");
 
-  // ids starts from 0
   int num_images = 1;
   int curr_img = imgs_ids[0];
   // Start building
@@ -170,13 +169,14 @@ void VocabularyTree::train(const std::vector<const Desc256*>& x, const Params& p
   std::vector<int> last_img(num_words(), -1);
   idf_.assign(word_node_.size(), 0.0);
   for (std::size_t i = 0; i < x.size(); i++) {
-    auto word = transform(*x[i]);
-    if (word == -1) continue;
-    if (imgs_ids[i] == last_img[word]) continue;  // already seen in the image
     if (curr_img != imgs_ids[i]) {
       curr_img = imgs_ids[i];
       num_images++;
     }
+    auto word = transform(*x[i]);
+    if (word == -1) continue;
+    if (imgs_ids[i] == last_img[word]) continue;  // already seen in the image
+
     doc_freq[word] += 1;
     last_img[word] = imgs_ids[i];
   }
