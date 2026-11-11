@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <map>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "place_rec/binary_descriptor.hpp"
@@ -203,6 +205,75 @@ int VocabularyTree::transform(const Desc256& descriptor) const {
     curr = best;
   }
   return tree_[curr].word;
+}
+
+VocabularyTree::BowVector VocabularyTree::bow(const std::vector<const Desc256*>& descs) const {
+  BowVector out{};
+  if (descs.empty()) return out;
+  if (tree_.empty()) return out;
+  if (idf_.empty()) return out;
+
+  std::map<int, float> acc;
+  for (const auto* desc : descs) {
+    int word = transform(*desc);
+    if (word >= 0) {
+      acc[word] += 1.0f;
+    }
+  }
+  if (acc.empty()) return out;
+  out.reserve(acc.size());
+  float sum{0.0f};
+  for (const auto& [word, freq] : acc) {
+    float weight = idf_[word] * freq;
+    if (weight <= 0.0f) continue;
+    sum += weight;
+    out.emplace_back(word, weight);
+  }
+  if (out.empty()) return out;
+
+  for (auto& [word, weight] : out) {
+    weight /= sum;
+  }
+  return out;
+}
+
+float similarity_score(const VocabularyTree::BowVector& bow1,
+                       const VocabularyTree::BowVector& bow2) {
+  float score = 0.0f;
+  std::size_t i = 0, j = 0;
+  while (i < bow1.size() && j < bow2.size()) {
+    if (bow1[i].first > bow2[j].first)
+      j++;
+    else if (bow2[j].first > bow1[i].first)
+      i++;
+    else {
+      score += std::min(bow1[i].second, bow2[j].second);
+      ++i;
+      ++j;
+    }
+  }
+  return score;
+}
+
+int InvertedIndex::add(const VocabularyTree::BowVector& v) {
+  if (v.empty()) return num_keyframes_++;
+  for (const auto& [word, weigth] : v) {
+    lists_.at(word).emplace_back(num_keyframes_, weigth);
+  }
+  return num_keyframes_++;
+}
+
+std::vector<float> InvertedIndex::scores(const VocabularyTree::BowVector& q) const {
+  std::vector<float> result(num_keyframes_, 0.0f);
+  if (q.empty()) return result;
+  if (num_keyframes_ == 0) return result;
+
+  for (const auto& [word, weigth_query] : q) {
+    for (const auto& [key_id, weigth_bow] : lists_.at(word)) {
+      result[key_id] += std::min(weigth_bow, weigth_query);
+    }
+  }
+  return result;
 }
 
 }  // namespace pr
