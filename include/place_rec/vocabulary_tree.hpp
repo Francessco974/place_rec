@@ -67,7 +67,7 @@ class InvertedIndex {
   std::vector<float> scores(const VocabularyTree::BowVector& v) const;
 
  private:
-  // word [keyframe [keyframe id - weigth]]
+  // word [keyframe [keyframe id - weight]]
   std::vector<std::vector<std::pair<int, float>>> lists_;
 
   int num_keyframes_ = 0;

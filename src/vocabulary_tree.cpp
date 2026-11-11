@@ -257,8 +257,8 @@ float similarity_score(const VocabularyTree::BowVector& bow1,
 
 int InvertedIndex::add(const VocabularyTree::BowVector& v) {
   if (v.empty()) return num_keyframes_++;
-  for (const auto& [word, weigth] : v) {
-    lists_.at(word).emplace_back(num_keyframes_, weigth);
+  for (const auto& [word, weight] : v) {
+    lists_.at(word).emplace_back(num_keyframes_, weight);
   }
   return num_keyframes_++;
 }
@@ -268,9 +268,9 @@ std::vector<float> InvertedIndex::scores(const VocabularyTree::BowVector& q) con
   if (q.empty()) return result;
   if (num_keyframes_ == 0) return result;
 
-  for (const auto& [word, weigth_query] : q) {
-    for (const auto& [key_id, weigth_bow] : lists_.at(word)) {
-      result[key_id] += std::min(weigth_bow, weigth_query);
+  for (const auto& [word, weight_query] : q) {
+    for (const auto& [key_id, weight_bow] : lists_.at(word)) {
+      result[key_id] += std::min(weight_bow, weight_query);
     }
   }
   return result;
