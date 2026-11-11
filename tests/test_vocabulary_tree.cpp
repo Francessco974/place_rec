@@ -7,45 +7,14 @@
 #include <vector>
 
 #include "place_rec/vocabulary_tree.hpp"
+#include "test_helpers.hpp"
 
-namespace {
 using pr::Desc256;
 using pr::VocabularyTree;
+using namespace pr::test;
 
-// base with `flips` random bits flipped (a bit may be hit twice: fine)
-Desc256 noisy(const Desc256& base, int flips, std::mt19937& gen) {
-  Desc256 d = base;
-  std::uniform_int_distribution<int> bit(0, 255);
-  for (int f = 0; f < flips; ++f) {
-    const int b = bit(gen);
-    d[b / 64] ^= (1ULL << (b % 64));
-  }
-  return d;
-}
-
-// Call only AFTER `v` is fully built, or push_back may invalidate the pointers.
-std::vector<const Desc256*> ptrs(const std::vector<Desc256>& v) {
-  std::vector<const Desc256*> p;
-  p.reserve(v.size());
-  for (const auto& d : v) p.push_back(&d);
-  return p;
-}
-
-pr::Desc256 zeros() { return pr::Desc256{}; }
-pr::Desc256 ones() {
-  pr::Desc256 d;
-  d.fill(~0ULL);
-  return d;
-}
-pr::Desc256 with_low8(pr::Desc256 d, bool set) {
-  if (set)
-    d[0] |= 0xFFULL;
-  else
-    d[0] &= ~0xFFULL;
-  return d;
-}
-
-void expect_leaf_invariant(const pr::VocabularyTree& t) {
+namespace {
+void expect_leaf_invariant(const VocabularyTree& t) {
   for (int w = 0; w < t.num_words(); ++w) {
     const auto& n = t.node(t.word_node(w));
     EXPECT_EQ(n.word, w);
@@ -53,6 +22,8 @@ void expect_leaf_invariant(const pr::VocabularyTree& t) {
   }
 }
 }  // namespace
+
+// ---------- k-means ----------
 
 TEST(KMeans, TwoSeparatedClusters) {
   std::mt19937 gen(123);
@@ -121,12 +92,14 @@ TEST(KMeans, LabelsAreValidAndDeterministic) {
   EXPECT_EQ(a.centroids, b.centroids);
 }
 
+// ---------- train ----------
+
 TEST(VocabularyTreeTrain, TwoLevelsOfClusters) {
   // A1 = zeros, A2 = zeros + 8 bits, B1 = ones, B2 = ones - 8 bits; two copies each
   const auto a1 = zeros(), a2 = with_low8(zeros(), true);
   const auto b1 = ones(), b2 = with_low8(ones(), false);
-  std::vector<pr::Desc256> data = {a1, a1, a2, a2, b1, b1, b2, b2};
-  pr::VocabularyTree t;
+  std::vector<Desc256> data = {a1, a1, a2, a2, b1, b1, b2, b2};
+  VocabularyTree t;
   t.train(ptrs(data), {2, 2, 25, 42}, std::vector<int>(data.size(), 0));
   EXPECT_EQ(t.num_nodes(), 7);
   EXPECT_EQ(t.num_words(), 4);
@@ -134,8 +107,8 @@ TEST(VocabularyTreeTrain, TwoLevelsOfClusters) {
 }
 
 TEST(VocabularyTreeTrain, IdenticalPointsGiveRootLeaf) {
-  std::vector<pr::Desc256> data(5, ones());
-  pr::VocabularyTree t;
+  std::vector<Desc256> data(5, ones());
+  VocabularyTree t;
   t.train(ptrs(data), {2, 2, 25, 42}, std::vector<int>(data.size(), 0));
   EXPECT_EQ(t.num_nodes(), 1);
   EXPECT_EQ(t.num_words(), 1);
@@ -143,17 +116,19 @@ TEST(VocabularyTreeTrain, IdenticalPointsGiveRootLeaf) {
 }
 
 TEST(VocabularyTreeTrain, EmptyInputGivesNoWords) {
-  pr::VocabularyTree t;
+  VocabularyTree t;
   t.train({}, {}, {});
   EXPECT_EQ(t.num_nodes(), 1);
   EXPECT_EQ(t.num_words(), 0);
 }
 
+// ---------- transform ----------
+
 TEST(VocabularyTreeTransform, TrainingPointsMapToDistinctLeaves) {
   const auto a1 = zeros(), a2 = with_low8(zeros(), true);
   const auto b1 = ones(), b2 = with_low8(ones(), false);
-  std::vector<pr::Desc256> data = {a1, a1, a2, a2, b1, b1, b2, b2};
-  pr::VocabularyTree t;
+  std::vector<Desc256> data = {a1, a1, a2, a2, b1, b1, b2, b2};
+  VocabularyTree t;
   t.train(ptrs(data), {2, 2, 25, 42}, std::vector<int>(data.size(), 0));
   for (const auto& d : data) {
     const int w = t.transform(d);
@@ -167,17 +142,17 @@ TEST(VocabularyTreeTransform, TrainingPointsMapToDistinctLeaves) {
 }
 
 TEST(VocabularyTreeTransform, RootOnlyTreeReturnsWordZero) {
-  std::vector<pr::Desc256> data(5, ones());
-  pr::VocabularyTree t;
+  std::vector<Desc256> data(5, ones());
+  VocabularyTree t;
   t.train(ptrs(data), {2, 2, 25, 42}, std::vector<int>(data.size(), 0));
   EXPECT_EQ(t.transform(zeros()), 0);
   EXPECT_EQ(t.transform(ones()), 0);
 }
 
 TEST(VocabularyTreeTransform, EmptyTreeReturnsMinusOne) {
-  pr::VocabularyTree untrained;
+  VocabularyTree untrained;
   EXPECT_EQ(untrained.transform(zeros()), -1);  // tree_ empty
-  pr::VocabularyTree t;
+  VocabularyTree t;
   t.train({}, {}, {});
   EXPECT_EQ(t.transform(zeros()), -1);  // root without word
 }
@@ -186,20 +161,22 @@ TEST(VocabularyTreeTransform, NoisyQueryKeepsWord) {
   std::mt19937 gen(9);
   const auto a1 = zeros(), a2 = with_low8(zeros(), true);
   const auto b1 = ones(), b2 = with_low8(ones(), false);
-  std::vector<pr::Desc256> data = {a1, a1, a2, a2, b1, b1, b2, b2};
-  pr::VocabularyTree t;
+  std::vector<Desc256> data = {a1, a1, a2, a2, b1, b1, b2, b2};
+  VocabularyTree t;
   t.train(ptrs(data), {2, 2, 25, 42}, std::vector<int>(data.size(), 0));
   for (const auto& base : data) {
     for (int i = 0; i < 20; ++i) EXPECT_EQ(t.transform(noisy(base, 3, gen)), t.transform(base));
   }
 }
 
+// ---------- IDF ----------
+
 TEST(VocabularyTreeIdf, MatchesSetBasedCount) {
   const auto a1 = zeros(), a2 = with_low8(zeros(), true);
   const auto b1 = ones(), b2 = with_low8(ones(), false);
-  std::vector<pr::Desc256> data = {a1, a1, a1, a2, a1, b1, a1, b2};
+  std::vector<Desc256> data = {a1, a1, a1, a2, a1, b1, a1, b2};
   const std::vector<int> ids = {0, 0, 0, 0, 1, 1, 2, 2};
-  pr::VocabularyTree t;
+  VocabularyTree t;
   t.train(ptrs(data), {2, 2, 25, 42}, ids);
   ASSERT_GE(t.num_words(), 2);
 
@@ -214,84 +191,28 @@ TEST(VocabularyTreeIdf, MatchesSetBasedCount) {
 }
 
 TEST(VocabularyTreeIdf, SizeMismatchThrows) {
-  std::vector<pr::Desc256> data(4, ones());
-  pr::VocabularyTree t;
+  std::vector<Desc256> data(4, ones());
+  VocabularyTree t;
   EXPECT_THROW(t.train(ptrs(data), {}, {0, 0}), std::invalid_argument);
 }
 
 TEST(VocabularyTreeIdf, UnsortedIdsThrow) {
-  std::vector<pr::Desc256> data(4, ones());
-  pr::VocabularyTree t;
+  std::vector<Desc256> data(4, ones());
+  VocabularyTree t;
   EXPECT_THROW(t.train(ptrs(data), {}, {0, 1, 0, 1}), std::invalid_argument);
 }
 
 TEST(VocabularyTreeIdf, NegativeIdThrows) {
-  std::vector<pr::Desc256> data(2, ones());
-  pr::VocabularyTree t;
+  std::vector<Desc256> data(2, ones());
+  VocabularyTree t;
   EXPECT_THROW(t.train(ptrs(data), {}, {-1, 0}), std::invalid_argument);
 }
 
 TEST(VocabularyTreeIdf, GapInIdsCountsGroups) {
   const auto a1 = zeros(), b1 = ones();
-  std::vector<pr::Desc256> data = {a1, b1, a1, b1};
-  pr::VocabularyTree t;
+  std::vector<Desc256> data = {a1, b1, a1, b1};
+  VocabularyTree t;
   t.train(ptrs(data), {2, 2, 25, 42}, {0, 0, 5, 5});  // 2 images, ids 0 and 5
   for (int w = 0; w < t.num_words(); ++w)
     EXPECT_FLOAT_EQ(t.idf(w), 0.0f);  // each word in both images
-}
-
-TEST(VocabularyTreeBow, SumsToOneAndIsSorted) {
-  const auto a1 = zeros(), a2 = with_low8(zeros(), true);
-  const auto b1 = ones(), b2 = with_low8(ones(), false);
-  std::vector<pr::Desc256> data = {a1, a1, a2, a2, a1, b1, b2, b2};
-  pr::VocabularyTree t;
-  t.train(ptrs(data), {2, 2, 25, 42}, {0, 0, 0, 0, 1, 1, 2, 2});
-  const std::vector<pr::Desc256> img = {a1, a1, a2, b1};
-  const auto v = t.bow(ptrs(img));
-  ASSERT_FALSE(v.empty());
-  float s = 0;
-  for (size_t i = 0; i < v.size(); ++i) {
-    s += v[i].second;
-    EXPECT_GT(v[i].second, 0.0f);
-    if (i) EXPECT_LT(v[i - 1].first, v[i].first);
-  }
-  EXPECT_NEAR(s, 1.0f, 1e-5f);
-  EXPECT_EQ(v, t.bow(ptrs(img)));  // deterministic
-}
-
-TEST(VocabularyTreeBow, EmptyCases) {
-  pr::VocabularyTree untrained;
-  const std::vector<pr::Desc256> img = {zeros()};
-  EXPECT_TRUE(untrained.bow(ptrs(img)).empty());
-  EXPECT_TRUE(untrained.bow({}).empty());
-}
-
-using BV = pr::VocabularyTree::BowVector;
-
-TEST(SimilarityScore, IdenticalIsOne) {
-  const BV v = {{2, 0.5f}, {7, 0.5f}};
-  EXPECT_NEAR(pr::similarity_score(v, v), 1.0f, 1e-6f);
-}
-
-TEST(SimilarityScore, ToyExample) {
-  const BV v = {{2, 0.5f}, {7, 0.5f}};
-  const BV w = {{2, 0.25f}, {5, 0.5f}, {7, 0.25f}};
-  EXPECT_NEAR(pr::similarity_score(v, w), 0.5f, 1e-6f);
-  EXPECT_NEAR(pr::similarity_score(w, v), 0.5f, 1e-6f);  // symmetric
-}
-
-TEST(SimilarityScore, DisjointAndEmptyGiveZero) {
-  const BV v = {{1, 1.0f}};
-  const BV w = {{2, 1.0f}};
-  EXPECT_FLOAT_EQ(pr::similarity_score(v, w), 0.0f);
-  EXPECT_FLOAT_EQ(pr::similarity_score(v, BV{}), 0.0f);
-  EXPECT_FLOAT_EQ(pr::similarity_score(BV{}, BV{}), 0.0f);
-}
-
-TEST(SimilarityScore, MatchesL1Formula) {
-  const BV v = {{0, 0.2f}, {3, 0.3f}, {9, 0.5f}};
-  const BV w = {{3, 0.6f}, {4, 0.1f}, {9, 0.3f}};
-  // 1 - 0.5 * sum|v-w| over the union of words
-  const float l1 = 0.2f + 0.3f + 0.1f + 0.2f;  // words 0, 3, 4, 9
-  EXPECT_NEAR(pr::similarity_score(v, w), 1.0f - 0.5f * l1, 1e-6f);
 }
