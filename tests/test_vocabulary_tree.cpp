@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <random>
 #include <set>
 #include <stdexcept>
@@ -215,4 +218,81 @@ TEST(VocabularyTreeIdf, GapInIdsCountsGroups) {
   t.train(ptrs(data), {2, 2, 25, 42}, {0, 0, 5, 5});  // 2 images, ids 0 and 5
   for (int w = 0; w < t.num_words(); ++w)
     EXPECT_FLOAT_EQ(t.idf(w), 0.0f);  // each word in both images
+}
+
+namespace {
+std::string tmp_path(const char* name) {
+  return (std::filesystem::temp_directory_path() / name).string();
+}
+VocabularyTree small_tree() {
+  const auto a1 = zeros(), a2 = with_low8(zeros(), true);
+  const auto b1 = ones(), b2 = with_low8(ones(), false);
+  static const std::vector<Desc256> data = {a1, a1, a2, a2, a1, b1, b2, b2};
+  VocabularyTree t;
+  t.train(ptrs(data), {2, 2, 25, 42}, {0, 0, 0, 0, 1, 1, 2, 2});
+  return t;
+}
+}  // namespace
+
+TEST(VocabularyTreeIo, RoundTrip) {
+  const auto t = small_tree();
+  const auto p = tmp_path("voc_roundtrip.bin");
+  t.save(p);
+  const auto u = VocabularyTree::load(p);
+  ASSERT_EQ(u.num_nodes(), t.num_nodes());
+  ASSERT_EQ(u.num_words(), t.num_words());
+  for (int i = 0; i < t.num_nodes(); ++i) {
+    EXPECT_EQ(u.node(i).centroid, t.node(i).centroid);
+    EXPECT_EQ(u.node(i).word, t.node(i).word);
+    EXPECT_EQ(u.node(i).children, t.node(i).children);
+  }
+  for (int w = 0; w < t.num_words(); ++w) {
+    EXPECT_EQ(u.word_node(w), t.word_node(w));
+    EXPECT_FLOAT_EQ(u.idf(w), t.idf(w));
+  }
+  const std::vector<Desc256> img = {zeros(), with_low8(zeros(), true), ones()};
+  EXPECT_EQ(u.bow(ptrs(img)), t.bow(ptrs(img)));
+}
+
+TEST(VocabularyTreeIo, EmptyInputTreeRoundTrips) {
+  VocabularyTree t;
+  t.train({}, {}, {});
+  const auto p = tmp_path("voc_empty.bin");
+  t.save(p);
+  const auto u = VocabularyTree::load(p);
+  EXPECT_EQ(u.num_nodes(), 1);
+  EXPECT_EQ(u.num_words(), 0);
+}
+
+TEST(VocabularyTreeIo, BadFilesThrow) {
+  EXPECT_THROW(VocabularyTree::load(tmp_path("does_not_exist.bin")), std::runtime_error);
+
+  const auto p = tmp_path("voc_bad.bin");
+  small_tree().save(p);
+  std::string bytes;
+  {
+    std::ifstream in(p, std::ios::binary);
+    bytes.assign(std::istreambuf_iterator<char>(in), {});
+  }
+  auto write_file = [&](const std::string& b) {
+    std::ofstream(p, std::ios::binary | std::ios::trunc).write(b.data(), b.size());
+  };
+
+  write_file(bytes.substr(0, bytes.size() / 2));  // truncated
+  EXPECT_THROW(VocabularyTree::load(p), std::runtime_error);
+
+  auto bad_magic = bytes;
+  bad_magic[0] = 'X';
+  write_file(bad_magic);
+  EXPECT_THROW(VocabularyTree::load(p), std::runtime_error);
+
+  auto bad_version = bytes;
+  bad_version[8] = 9;
+  write_file(bad_version);
+  EXPECT_THROW(VocabularyTree::load(p), std::runtime_error);
+}
+
+TEST(VocabularyTreeIo, SaveUntrainedThrows) {
+  VocabularyTree t;
+  EXPECT_THROW(t.save(tmp_path("voc_untrained.bin")), std::logic_error);
 }

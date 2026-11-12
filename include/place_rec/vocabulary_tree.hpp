@@ -1,5 +1,6 @@
 #pragma once
 #include <random>
+#include <string>
 #include <vector>
 
 #include "place_rec/binary_descriptor.hpp"
@@ -47,6 +48,10 @@ class VocabularyTree {
 
   // Sorted by word id, sums to 1, empty if no informative words.
   BowVector bow(const std::vector<const Desc256*>& descs) const;
+
+  // Binary file, little-endian, format version 1. Throws std::runtime_error on any problem.
+  void save(const std::string& path) const;
+  static VocabularyTree load(const std::string& path);
 
  private:
   std::vector<Node> tree_;
