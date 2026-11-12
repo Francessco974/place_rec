@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "place_rec/bow_vector.hpp"
+#include "place_rec/inverted_index.hpp"
 #include "place_rec/vocabulary_tree.hpp"
 
 using BV = pr::VocabularyTree::BowVector;

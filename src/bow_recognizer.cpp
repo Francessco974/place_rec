@@ -8,6 +8,8 @@
 #include <vector>
 
 #include "place_rec/binary_descriptor.hpp"
+#include "place_rec/inverted_index.hpp"
+#include "place_rec/place_recognizer.hpp"
 #include "place_rec/types.hpp"
 #include "place_rec/vocabulary_tree.hpp"
 namespace pr {

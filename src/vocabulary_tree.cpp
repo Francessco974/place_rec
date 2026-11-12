@@ -237,43 +237,4 @@ VocabularyTree::BowVector VocabularyTree::bow(const std::vector<const Desc256*>&
   return out;
 }
 
-float similarity_score(const VocabularyTree::BowVector& bow1,
-                       const VocabularyTree::BowVector& bow2) {
-  float score = 0.0f;
-  std::size_t i = 0, j = 0;
-  while (i < bow1.size() && j < bow2.size()) {
-    if (bow1[i].first > bow2[j].first)
-      j++;
-    else if (bow2[j].first > bow1[i].first)
-      i++;
-    else {
-      score += std::min(bow1[i].second, bow2[j].second);
-      ++i;
-      ++j;
-    }
-  }
-  return score;
-}
-
-int InvertedIndex::add(const VocabularyTree::BowVector& v) {
-  if (v.empty()) return num_keyframes_++;
-  for (const auto& [word, weight] : v) {
-    lists_.at(word).emplace_back(num_keyframes_, weight);
-  }
-  return num_keyframes_++;
-}
-
-std::vector<float> InvertedIndex::scores(const VocabularyTree::BowVector& q) const {
-  std::vector<float> result(num_keyframes_, 0.0f);
-  if (q.empty()) return result;
-  if (num_keyframes_ == 0) return result;
-
-  for (const auto& [word, weight_query] : q) {
-    for (const auto& [key_id, weight_bow] : lists_.at(word)) {
-      result[key_id] += std::min(weight_bow, weight_query);
-    }
-  }
-  return result;
-}
-
 }  // namespace pr

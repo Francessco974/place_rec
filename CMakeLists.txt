@@ -20,7 +20,9 @@ add_library(place_rec
   src/temporal_filter.cpp
   src/feature_extractor.cpp
   src/geometric_verifier.cpp
-  src/tum_sequence.cpp)
+  src/tum_sequence.cpp
+  src/bow_vector.cpp
+  src/inverted_index.cpp)
 target_include_directories(place_rec PUBLIC include)
 target_link_libraries(place_rec PUBLIC ${OpenCV_LIBS} Eigen3::Eigen)
 target_compile_options(place_rec PRIVATE -Wall -Wextra)
