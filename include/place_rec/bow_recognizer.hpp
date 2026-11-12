@@ -18,7 +18,7 @@ class BowRecognizer : public PlaceRecognizer {
 
   void add(const Keyframe& kf) override;
 
-  std::vector<Candidate> query(const Keyframe& Kf, double max_stamp,
+  std::vector<Candidate> query(const Keyframe& kf, double max_stamp,
                                int max_results) const override;
 
  private:
