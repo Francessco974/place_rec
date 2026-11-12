@@ -10,7 +10,6 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
 #include "place_rec/binary_descriptor.hpp"

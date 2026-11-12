@@ -22,7 +22,8 @@ add_library(place_rec
   src/geometric_verifier.cpp
   src/tum_sequence.cpp
   src/bow_vector.cpp
-  src/inverted_index.cpp)
+  src/inverted_index.cpp
+  src/recognizer_factory.cpp)
 target_include_directories(place_rec PUBLIC include)
 target_link_libraries(place_rec PUBLIC ${OpenCV_LIBS} Eigen3::Eigen)
 target_compile_options(place_rec PRIVATE -Wall -Wextra)
@@ -37,7 +38,7 @@ target_link_libraries(run_eval PRIVATE place_rec)
 
 enable_testing()
 find_package(GTest REQUIRED)
-add_executable(unit_tests tests/test_bow.cpp tests/test_verifier.cpp tests/test_vocabulary_tree.cpp tests/test_inverted_index.cpp)
+add_executable(unit_tests tests/test_bow.cpp tests/test_verifier.cpp tests/test_vocabulary_tree.cpp tests/test_inverted_index.cpp tests/test_recognizer_factory.cpp)
 target_link_libraries(unit_tests PRIVATE place_rec GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
