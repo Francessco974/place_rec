@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "app_utils.hpp"
 #include "place_rec/binary_descriptor.hpp"
 #include "place_rec/euroc_sequence.hpp"
 #include "place_rec/feature_extractor.hpp"
@@ -32,35 +33,6 @@ using Clock = std::chrono::steady_clock;
 
 double seconds(Clock::time_point a, Clock::time_point b) {
   return std::chrono::duration<double>(b - a).count();
-}
-
-std::vector<std::string> split(const std::string& s, char sep) {
-  std::vector<std::string> out;
-  std::istringstream ss(s);
-  std::string item;
-  while (std::getline(ss, item, sep))
-    if (!item.empty()) out.push_back(item);
-  return out;
-}
-
-// Escape the two characters that break a JSON string: backslash and double quote.
-std::string json_escape(const std::string& s) {
-  std::string out;
-  out.reserve(s.size());
-  for (char c : s) {
-    if (c == '\\' || c == '"') out += '\\';
-    out += c;
-  }
-  return out;
-}
-
-std::string now_iso8601() {
-  const std::time_t t = std::time(nullptr);
-  std::tm tm{};
-  localtime_r(&t, &tm);
-  std::ostringstream ss;
-  ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
-  return ss.str();
 }
 
 struct TrainStats {
@@ -81,10 +53,10 @@ void write_sidecar(const std::string& json_path, const std::string& vocab_path,
   if (!f) throw std::runtime_error("train_vocab: cannot write " + json_path);
   f << std::setprecision(6);
   f << "{\n";
-  f << "  \"vocab_file\": \"" << json_escape(std::filesystem::path(vocab_path).filename().string())
-    << "\",\n";
-  f << "  \"created\": \"" << now_iso8601() << "\",\n";
-  f << "  \"git_hash\": \"" << json_escape(PLACE_REC_GIT_HASH) << "\",\n";
+  f << "  \"vocab_file\": \""
+    << apps::json_escape(std::filesystem::path(vocab_path).filename().string()) << "\",\n";
+  f << "  \"created\": \"" << apps::now_iso8601() << "\",\n";
+  f << "  \"git_hash\": \"" << apps::json_escape(PLACE_REC_GIT_HASH) << "\",\n";
   f << "  \"format_version\": 1,\n";
   f << "  \"k\": " << p.k << ", \"L\": " << p.L << ", \"max_iters\": " << p.max_iters
     << ", \"seed\": " << p.seed << ",\n";
@@ -95,7 +67,7 @@ void write_sidecar(const std::string& json_path, const std::string& vocab_path,
   f << "    \"dataset\": \"EuRoC cam0\",\n";
   f << "    \"sequences\": [";
   for (std::size_t i = 0; i < s.sequences.size(); ++i)
-    f << (i ? ", " : "") << '"' << json_escape(s.sequences[i]) << '"';
+    f << (i ? ", " : "") << '"' << apps::json_escape(s.sequences[i]) << '"';
   f << "],\n";
   f << "    \"stride_seconds\": " << s.stride_seconds << ",\n";
   f << "    \"frames_total\": " << s.frames_total << ",\n";
@@ -132,7 +104,7 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    const std::vector<std::string> sequences = split(arg["--seq"], ',');
+    const std::vector<std::string> sequences = apps::split(arg["--seq"], ',');
     if (sequences.empty()) {
       std::cerr << "train_vocab: no sequence given in --seq\n";
       usage();
