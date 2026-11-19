@@ -35,4 +35,13 @@ inline std::string now_iso8601() {
   return ss.str();
 }
 
+inline std::string now_filename() {
+  const std::time_t t = std::time(nullptr);
+  std::tm tm{};
+  localtime_r(&t, &tm);
+  std::ostringstream ss;
+  ss << std::put_time(&tm, "%Y-%m-%d_%H-%M-%S");
+  return ss.str();
+}
+
 }  // namespace apps

@@ -54,6 +54,9 @@ target_link_libraries(train_vocab PRIVATE place_rec)
 target_compile_definitions(train_vocab PRIVATE PLACE_REC_GIT_HASH="${PLACE_REC_GIT_HASH}")
 add_executable(run_eval apps/run_eval.cpp)
 target_link_libraries(run_eval PRIVATE place_rec)
+target_compile_definitions(run_eval PRIVATE
+  PLACE_REC_GIT_HASH="${PLACE_REC_GIT_HASH}"
+  PLACE_REC_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
 
 enable_testing()
 find_package(GTest REQUIRED)
