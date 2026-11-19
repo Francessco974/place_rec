@@ -1,6 +1,23 @@
 cmake_minimum_required(VERSION 3.16)
 project(place_rec LANGUAGES CXX)
 
+execute_process(
+  COMMAND git rev-parse --short HEAD
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE PLACE_REC_GIT_HASH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET)
+execute_process(
+  COMMAND git diff --quiet
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  RESULT_VARIABLE PLACE_REC_GIT_DIRTY
+  ERROR_QUIET)
+if(NOT PLACE_REC_GIT_HASH)
+  set(PLACE_REC_GIT_HASH "unknown")
+elseif(PLACE_REC_GIT_DIRTY)
+  set(PLACE_REC_GIT_HASH "${PLACE_REC_GIT_HASH}-dirty")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT CMAKE_BUILD_TYPE)
@@ -34,6 +51,7 @@ endif()  # aarch64 (Orin): popcount maps to NEON CNT without extra flags
 
 add_executable(train_vocab apps/train_vocab.cpp)
 target_link_libraries(train_vocab PRIVATE place_rec)
+target_compile_definitions(train_vocab PRIVATE PLACE_REC_GIT_HASH="${PLACE_REC_GIT_HASH}")
 add_executable(run_eval apps/run_eval.cpp)
 target_link_libraries(run_eval PRIVATE place_rec)
 
