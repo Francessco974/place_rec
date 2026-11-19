@@ -1,0 +1,18 @@
+{
+  "vocab_file": "vocab_k10_L5.bin",
+  "created": "2026-11-19T16:11:23",
+  "git_hash": "6a478c0",
+  "format_version": 1,
+  "k": 10, "L": 5, "max_iters": 25, "seed": 42,
+  "orb": {"n_features": 1000, "scale_factor": 1.2, "n_levels": 8, "fast_threshold": 20},
+  "training": {
+    "dataset": "EuRoC cam0",
+    "sequences": ["/home/fra/ugv_data/datasets/euroc/MH_01_easy", "/home/fra/ugv_data/datasets/euroc/MH_02_easy", "/home/fra/ugv_data/datasets/euroc/MH_03_medium", "/home/fra/ugv_data/datasets/euroc/MH_04_difficult", "/home/fra/ugv_data/datasets/euroc/MH_05_difficult"],
+    "stride_seconds": 0.5,
+    "frames_total": 1375,
+    "images_used": 1375,
+    "images_skipped_no_descriptors": 0,
+    "descriptors": 1360561
+  },
+  "result": {"num_nodes": 110394, "num_words": 99300, "extract_seconds": 13.6165, "train_seconds": 29.9675}
+}
