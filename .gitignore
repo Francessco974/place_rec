@@ -7,3 +7,5 @@ out/
 models/*.bin
 models/*.bin
 runs/
+build-cov/
+*.gcov
