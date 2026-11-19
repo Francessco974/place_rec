@@ -16,7 +16,7 @@ class VocabularyTree {
   };
 
   struct Node {
-    Desc256 centroid;
+    Desc256 centroid{};
     int word{-1};
     std::vector<int> children;
   };
