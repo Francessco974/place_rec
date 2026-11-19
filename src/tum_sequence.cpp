@@ -7,6 +7,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "place_rec/image_io.hpp"
+
 namespace pr {
 
 namespace {
@@ -56,11 +58,7 @@ std::vector<TumFrame> TumSequence::keyframes(double period) const {
   return out;
 }
 
-cv::Mat TumSequence::load_gray(const std::string& path) {
-  cv::Mat g = cv::imread(path, cv::IMREAD_GRAYSCALE);
-  if (g.empty()) throw std::runtime_error("cannot read " + path);
-  return g;
-}
+cv::Mat TumSequence::load_gray(const std::string& path) { return pr::load_gray(path); }
 
 cv::Mat TumSequence::load_depth_m(const std::string& path) {
   cv::Mat raw = cv::imread(path, cv::IMREAD_UNCHANGED);
