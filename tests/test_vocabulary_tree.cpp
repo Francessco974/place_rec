@@ -296,3 +296,26 @@ TEST(VocabularyTreeIo, SaveUntrainedThrows) {
   VocabularyTree t;
   EXPECT_THROW(t.save(tmp_path("voc_untrained.bin")), std::logic_error);
 }
+
+TEST(KMeans, NoEmptyClusterInOutput) {
+  std::mt19937 gen(11);
+  for (int trial = 0; trial < 200; ++trial) {
+    std::vector<Desc256> data;
+    const int n = 20 + trial % 40;
+    for (int i = 0; i < n; ++i) data.push_back(noisy(Desc256{}, 1 + trial % 120, gen));
+    const auto x = ptrs(data);
+    for (int k : {3, 5, 8}) {
+      std::mt19937 rng(trial * 31 + k);
+      const auto r = VocabularyTree::kmeans(x, k, 25, rng);
+      ASSERT_LE(r.centroids.size(), static_cast<size_t>(k));
+      std::vector<int> count(r.centroids.size(), 0);
+      for (int a : r.assign) {
+        ASSERT_GE(a, 0);
+        ASSERT_LT(a, static_cast<int>(r.centroids.size()));
+        ++count[a];
+      }
+      for (size_t c = 0; c < count.size(); ++c)
+        EXPECT_GT(count[c], 0) << "empty cluster " << c << " trial " << trial << " k " << k;
+    }
+  }
+}
