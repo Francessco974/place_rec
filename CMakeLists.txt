@@ -31,7 +31,6 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 add_library(place_rec
   src/binary_descriptor.cpp
   src/vocabulary_tree.cpp
-  src/bow_database.cpp
   src/bow_recognizer.cpp
   src/tiny_image_recognizer.cpp
   src/temporal_filter.cpp
