@@ -1,7 +1,6 @@
 #include "place_rec/matcher.hpp"
 
 #include <cstddef>
-#include <utility>
 #include <vector>
 
 #include "place_rec/binary_descriptor.hpp"
