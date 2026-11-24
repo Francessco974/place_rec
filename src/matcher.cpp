@@ -1,6 +1,8 @@
 #include "place_rec/matcher.hpp"
 
+#include <algorithm>
 #include <cstddef>
+#include <stdexcept>
 #include <vector>
 
 #include "place_rec/binary_descriptor.hpp"
@@ -84,6 +86,26 @@ void cross_check_filter(std::vector<MatchDescription>& matches, FilterStats& sta
 int count_valid(const std::vector<MatchDescription>& matches) {
   return static_cast<int>(std::count_if(matches.begin(), matches.end(),
                                         [](const MatchDescription& m) { return m.valid; }));
+}
+
+std::vector<MatchDescription> match_and_filter(const std::vector<Desc256>& query,
+                                               const std::vector<Desc256>& candidate,
+                                               const MatchFilterParams& conf, FilterStats& stats) {
+  if (conf.use_max_dist && (conf.max_dist < 0 || conf.max_dist > 256))
+    throw std::invalid_argument("match_and_filter: max_dist must be in [0, 256]");
+  if (conf.use_ratio && !(conf.ratio > 0.0f && conf.ratio <= 1.0f))
+    throw std::invalid_argument("match_and_filter: ratio must be in (0, 1]");
+
+  std::vector<MatchDescription> out = match_descriptors(query, candidate);
+  if (out.empty()) return out;
+
+  if (conf.use_max_dist) abs_threshold(out, conf.max_dist, stats);
+  if (conf.use_ratio) ratio_test(out, conf.ratio, stats);
+  if (conf.use_cross_check) cross_check_filter(out, stats);
+  // accumulate to allow counting over multiple candidate
+  stats.survivors += count_valid(out);
+
+  return out;
 }
 
 }  // namespace pr

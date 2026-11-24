@@ -9,6 +9,8 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <limits>
+#include <stdexcept>
 #include <vector>
 
 #include "place_rec/binary_descriptor.hpp"
@@ -138,6 +140,55 @@ TEST(MatchDescriptors, ResultIsPerQueryInOrder) {
   EXPECT_EQ(m[0].cand_index, 2);
   EXPECT_EQ(m[1].cand_index, 0);
   EXPECT_EQ(m[2].cand_index, 1);
+}
+
+TEST(MatchAndFilter, AllOffKeepsEveryRow) {
+  MatchFilterParams p;
+  p.use_max_dist = p.use_ratio = p.use_cross_check = false;
+  FilterStats s;
+  const auto m = match_and_filter({make_query(0, 2), make_query(0, 7)}, three_candidates(), p, s);
+  EXPECT_EQ(count_valid(m), 2);
+  EXPECT_EQ(s.survivors, 2);
+  EXPECT_EQ(s.rejected_by_dist + s.rejected_by_ratio + s.rejected_by_cross, 0);
+}
+
+// q0: d1=2, mutual. q1: d1=7, loses c0 to q0. q2: d1=60 > 50.
+TEST(MatchAndFilter, DefaultsReturnStatsAndAccumulate) {
+  const std::vector<Desc256> q = {make_query(0, 2), make_query(0, 7), make_query(1, 60)};
+  FilterStats s;
+  const auto m = match_and_filter(q, three_candidates(), MatchFilterParams{}, s);
+  EXPECT_TRUE(m[0].valid);
+  EXPECT_FALSE(m[1].valid);
+  EXPECT_FALSE(m[2].valid);
+  EXPECT_EQ(s.rejected_by_dist, 1);
+  EXPECT_EQ(s.rejected_by_ratio, 0);
+  EXPECT_EQ(s.rejected_by_cross, 1);
+  EXPECT_EQ(s.survivors, 1);
+  match_and_filter(q, three_candidates(), MatchFilterParams{}, s);  // second call adds
+  EXPECT_EQ(s.survivors, 2);
+  EXPECT_EQ(s.rejected_by_dist, 2);
+}
+
+TEST(MatchAndFilter, InvalidParamsThrow) {
+  FilterStats s;
+  for (float r : {0.0f, 1.5f, std::numeric_limits<float>::quiet_NaN()}) {
+    MatchFilterParams p;
+    p.ratio = r;
+    EXPECT_THROW(match_and_filter({}, {}, p, s), std::invalid_argument) << r;
+  }
+  for (int d : {-1, 257}) {
+    MatchFilterParams p;
+    p.max_dist = d;
+    EXPECT_THROW(match_and_filter({}, {}, p, s), std::invalid_argument) << d;
+  }
+}
+
+TEST(MatchAndFilter, DisabledFilterValueIsNotValidated) {
+  MatchFilterParams p;
+  p.use_ratio = false;
+  p.ratio = 0.0f;
+  FilterStats s;
+  EXPECT_NO_THROW(match_and_filter({}, {}, p, s));
 }
 
 }  // namespace

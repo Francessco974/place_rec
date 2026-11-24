@@ -27,6 +27,19 @@ struct FilterStats {
   int survivors{0};
 };
 
+// Allow custom filter
+struct MatchFilterParams {
+  bool use_max_dist{true};
+  int max_dist{50};
+  bool use_ratio{true};
+  float ratio{0.8f};
+  bool use_cross_check{true};
+};
+
+std::vector<MatchDescription> match_and_filter(const std::vector<Desc256>& query,
+                                               const std::vector<Desc256>& candidate,
+                                               const MatchFilterParams& conf, FilterStats& stats);
+
 std::vector<MatchDescription> match_descriptors(const std::vector<Desc256>& query,
                                                 const std::vector<Desc256>& candidate);
 // A filter may only set valid to false, and decides from d1, d2, cross_check only
