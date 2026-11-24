@@ -40,7 +40,8 @@ add_library(place_rec
   src/bow_vector.cpp
   src/inverted_index.cpp
   src/recognizer_factory.cpp
-  src/euroc_sequence.cpp)
+  src/euroc_sequence.cpp
+  src/matcher.cpp)
 target_include_directories(place_rec PUBLIC include)
 target_link_libraries(place_rec PUBLIC ${OpenCV_LIBS} Eigen3::Eigen)
 target_compile_options(place_rec PRIVATE -Wall -Wextra)
@@ -59,7 +60,8 @@ target_compile_definitions(run_eval PRIVATE
 
 enable_testing()
 find_package(GTest REQUIRED)
-add_executable(unit_tests tests/test_bow.cpp tests/test_verifier.cpp tests/test_vocabulary_tree.cpp tests/test_inverted_index.cpp tests/test_recognizer_factory.cpp tests/test_euroc.cpp)
+add_executable(unit_tests tests/test_bow.cpp tests/test_verifier.cpp tests/test_vocabulary_tree.cpp tests/test_inverted_index.cpp tests/test_recognizer_factory.cpp tests/test_euroc.cpp
+  tests/test_matcher.cpp)
 target_link_libraries(unit_tests PRIVATE place_rec GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
