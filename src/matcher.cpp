@@ -80,8 +80,6 @@ void cross_check_filter(std::vector<MatchDescription>& matches, FilterStats& sta
     }
   }
 }
-// header
-int count_valid(const std::vector<MatchDescription>& matches);
 
 int count_valid(const std::vector<MatchDescription>& matches) {
   return static_cast<int>(std::count_if(matches.begin(), matches.end(),
