@@ -41,7 +41,8 @@ add_library(place_rec
   src/inverted_index.cpp
   src/recognizer_factory.cpp
   src/euroc_sequence.cpp
-  src/matcher.cpp)
+  src/matcher.cpp
+  src/pnp.cpp)
 target_include_directories(place_rec PUBLIC include)
 target_link_libraries(place_rec PUBLIC ${OpenCV_LIBS} Eigen3::Eigen)
 target_compile_options(place_rec PRIVATE -Wall -Wextra)
